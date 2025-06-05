@@ -1,8 +1,8 @@
-# HackMyVM - Quick .5
+# HackMyVM - Cve1
 
-![Quick5.png](Quick5.png)
+![Cve1.png](Cve1.png)
 
-Ein detaillierter Bericht über die Kompromittierung der HackMyVM-Maschine "Quick .5". Dieser Bericht dokumentiert den gesamten Prozess von der initialen Erkundung bis zur Erlangung von Root-Rechten.
+Ein detaillierter Bericht über die Kompromittierung der HackMyVM-Maschine "Cve1". Dieser Bericht dokumentiert den gesamten Prozess von der initialen Erkundung bis zur Erlangung von Root-Rechten durch die Ausnutzung mehrerer bekannter Schwachstellen (CVEs).
 
 ---
 
@@ -10,43 +10,37 @@ Ein detaillierter Bericht über die Kompromittierung der HackMyVM-Maschine "Quic
 
 | Kategorie | Information |
 | :--- | :--- |
-| **Name** | Quick .5 |
+| **Name** | Cve1 |
 | **Plattform** | HackMyVM |
-| **Autor** | DarkSpirit |
+| **Autor** | *[Autor hier einfügen]* |
 | **Schwierigkeit** | Easy |
 | **Veröffentlichungsdatum** | 05. Juni 2025 |
-| **Link zur VM** | [https://hackmyvm.eu/machines/machine.php?vm=Quick5](https://hackmyvm.eu/machines/machine.php?vm=Quick5) |
-| **Mein Walkthrough** | [https://alientec1908.github.io/Quick5_HackMyVM_Easy/](https://alientec1908.github.io/Quick5_HackMyVM_Easy/) |
+| **Link zur VM** | *[Link zur VM hier einfügen]* |
+| **Mein Walkthrough** | *[Link zum Walkthrough hier einfügen]* |
 
 ---
 
 ### **Benötigte Fähigkeiten**
 
 *   **Netzwerk-Scanning:** `nmap`, `arp-scan`
-*   **Web-Enumeration & vHost Discovery:** `gobuster`, `nikto`, `wfuzz`
-*   **Client-Side Exploitation & Social Engineering**
-*   **Erstellung bösartiger ODT-Dateien mit Makros** (LibreOffice)
-*   **Post-Exploitation Enumeration**
-*   **Firefox-Profil-Exfiltration und Passwort-Extraktion** (`firefox_decrypt`)
-*   **Privilege Escalation durch Passwort-Wiederverwendung**
+*   **Web-Enumeration:** `gobuster`, `feroxbuster`
+*   **Ausnutzung von Deserialisierungs-Schwachstellen:** Insbesondere unsichere YAML-Verarbeitung (CVE-2022-24707).
+*   **Ausnutzung von Cron-Job-Fehlkonfigurationen**.
+*   **Ausnutzung von Command Injection in Dateinamen** (CVE-2022-1292).
+*   **Privilege Escalation durch unsichere `sudo`-Regeln**.
+*   **Verständnis der Linux-Systemadministration** (insb. `/etc/passwd`).
 
 ---
 
 ### **Zusammenfassung des Lösungswegs**
 
-Der Weg zur Kompromittierung dieser Maschine war ein mehrstufiger Prozess, der von der Web-Enumeration über einen kreativen Client-Side-Exploit bis hin zur Ausnutzung schwacher Passwortpraktiken führte.
+Die Kompromittierung dieser Maschine war ein schrittweiser Prozess, der die Verkettung von drei separaten Schwachstellen erforderte, um vom initialen Zugriff bis zu Root-Rechten zu gelangen.
 
-1.  **Initiale Erkundung:**
-    Ein `nmap`-Scan offenbarte einen Webserver auf Port 80. Die grundlegende Web-Enumeration zeigte aktive Verzeichnisauflistungen, aber keine direkten Schwachstellen.
+1.  **Initialer Zugriff (RCE via YAML Deserialization - CVE-2022-24707):**
+    Ein `nmap`-Scan offenbarte einen Webserver auf Port 9090, auf dem eine Anwendung lief, die im Quellcode als **PyTorch Lightning 1.5.9** identifiziert wurde. Diese Version ist anfällig für eine Remote Code Execution durch unsichere YAML-Deserialisierung (CVE-2022-24707). Durch das Hochladen einer speziell präparierten `file.yaml` mit einem Reverse-Shell-Payload konnte ein initialer Zugriff als Benutzer `www-data` erlangt werden.
 
-2.  **vHost Discovery & Angriffsvektor:**
-    Der entscheidende Schritt in der Enumeration war das vHost-Bruteforcing mit `wfuzz`. Dies deckte mehrere Subdomains auf, darunter `careers.quick.hmv`. Diese Seite enthielt eine Funktion zum Hochladen von Bewerbungsunterlagen, die auf `.odt`- und `.pdf`-Dateien beschränkt war.
+2.  **Lateral Movement (www-data → wicca via CVE-2022-1292):**
+    Die Enumeration als `www-data` deckte einen Cron-Job auf, der minütlich als Benutzer `wicca` den Befehl `c_rehash` im Verzeichnis `/etc/ssl/certs/` ausführte. Die auf dem System installierte OpenSSL-Version war anfällig für CVE-2022-1292. Durch das Erstellen einer Datei mit einem bösartigen Namen, der einen per Backticks eingebetteten `netcat`-Befehl enthielt, wurde beim nächsten Ausführen des Cron-Jobs eine Command Injection ausgelöst. Dies führte zu einer neuen Shell mit den Rechten des Benutzers `wicca`.
 
-3.  **Initialer Zugriff (ODT-Makro-Angriff):**
-    Der Angriffsplan bestand darin, eine `.odt`-Datei mit einem bösartigen Makro zu erstellen. Mittels LibreOffice wurde ein Basic-Makro geschrieben, das beim Öffnen des Dokuments eine Reverse Shell auslöst. Diese präparierte "Bewerbungsdatei" wurde hochgeladen. Nachdem ein (simulierter) Mitarbeiter das Dokument öffnete, wurde erfolgreich eine Shell mit den Rechten des Benutzers `andrew` etabliert.
-
-4.  **Privilege Escalation (Passwort-Wiederverwendung):**
-    *   **Enumeration:** Im Home-Verzeichnis von `andrew` wurde ein Firefox-Profil gefunden.
-    *   **Exfiltration:** Das gesamte Profil wurde über `tar` und `netcat` auf die Angreifer-Maschine übertragen.
-    *   **Entschlüsselung:** Mit dem Tool `firefox_decrypt.py` wurden die im Browser gespeicherten Anmeldeinformationen aus dem Profil extrahiert. Dies enthüllte das Passwort `SuperSecretPassword` für das Mitarbeiterportal.
-    *   **Root-Zugriff:** In einem klassischen Fall von Passwort-Wiederverwendung wurde dieses Passwort erfolgreich für den `root`-Account über `su` verwendet. Dies gewährte vollständige Kontrolle über das System.
+3.  **Privilege Escalation (wicca → root via Sudo-Misconfiguration):**
+    Eine Überprüfung der `sudo`-Rechte für `wicca` mit `sudo -l` ergab, dass der Befehl `/usr/bin/tee` ohne Passwort als `root` ausgeführt werden durfte. Diese Fehlkonfiguration wurde ausgenutzt, um die Datei `/etc/passwd` zu überschreiben. Dabei wurde der Passwort-Hash für den `root`-Benutzer entfernt. Anschließend konnte mit `su -` ohne Passwort zur `root`-Shell gewechselt werden, was die vollständige Kompromittierung der Maschine bedeutete.
