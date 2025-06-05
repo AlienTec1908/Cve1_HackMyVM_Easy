@@ -16,7 +16,7 @@ Ein detaillierter Bericht über die Kompromittierung der HackMyVM-Maschine "Cve1
 | **Schwierigkeit** | Easy |
 | **Veröffentlichungsdatum** | 05. Juni 2025 |
 | **Link zur VM** | *https://hackmyvm.eu/machines/machine.php?vm=cve1* |
-| **Mein Walkthrough** | *https://alientec1908.github.io/Cve_HackMyVM_Easy/* |
+| **Mein Walkthrough** | *https://alientec1908.github.io/Cve1_HackMyVM_Easy/* |
 
 ---
 
