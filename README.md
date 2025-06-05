@@ -12,11 +12,11 @@ Ein detaillierter Bericht über die Kompromittierung der HackMyVM-Maschine "Cve1
 | :--- | :--- |
 | **Name** | Cve1 |
 | **Plattform** | HackMyVM |
-| **Autor** | *[Autor hier einfügen]* |
+| **Autor** | *[DarkSpirit]* |
 | **Schwierigkeit** | Easy |
 | **Veröffentlichungsdatum** | 05. Juni 2025 |
-| **Link zur VM** | *[Link zur VM hier einfügen]* |
-| **Mein Walkthrough** | *[Link zum Walkthrough hier einfügen]* |
+| **Link zur VM** | *[[Link zur VM hier einfügen](https://hackmyvm.eu/machines/machine.php?vm=cve1)]* |
+| **Mein Walkthrough** | *[[Link zum Walkthrough hier einfügen](https://alientec1908.github.io/Cve1_HackMyVM_Easy/)]* |
 
 ---
 
