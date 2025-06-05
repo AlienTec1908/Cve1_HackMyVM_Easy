@@ -73,7 +73,7 @@ img { /* Oder eine spezifischere Klasse für deine Bilder */
 .level-container h2 {
     font-size: 24px;
     margin-bottom: 10px;
-    color: orange; /* Helles Grün */
+    color: lime; /* Helles Grün */
     text-align: center;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
@@ -95,9 +95,9 @@ img { /* Oder eine spezifischere Klasse für deine Bilder */
 }
 
 /* Farben der Segmente für Easy Level (Lime) */
-.segment-1 { background-color: orange; transform: rotate(0deg); }
-.segment-2 { background-color: orange; transform: rotate(120deg); }
-.segment-3 { background-color: orange; transform: rotate(240deg); }
+.segment-1 { background-color: lime; transform: rotate(0deg); }
+.segment-2 { background-color: lime; transform: rotate(120deg); }
+.segment-3 { background-color: lime; transform: rotate(240deg); }
 
 /* Innerer Kreis (passend zur NEUEN Header-Farbe) */
 .circle .inner {
